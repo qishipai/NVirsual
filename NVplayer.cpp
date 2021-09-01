@@ -49,7 +49,7 @@ BOOL CALLBACK filter(HSTREAM S, DWORD trk, BASS_MIDI_EVENT *E, BOOL sk, void *u)
 	return TRUE;
 }
 
-int NVmain(int ac, char **av)
+int main(int ac, char **av)
 {
 	if (ac != 3)
 	{
@@ -143,12 +143,4 @@ int NVmain(int ac, char **av)
 
 	delete[] Col; delete Win; BASS_Free(); BASS_PluginFree(0);
 	return 0;
-}
-
-int main(int ac, char **av)
-{
-	char midi[] = "/sdcard/default.mid";
-	char sf[] = "/sdcard/default.sf2";
-	char *arg[3]{nullptr, midi, sf};
-	return NVmain(3, arg);
 }
