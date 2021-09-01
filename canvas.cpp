@@ -44,15 +44,15 @@ Canvas::Canvas()
 
 	for (int i = 0; i < 11; ++i)
 	{
-		TX[i] = scale(i * 684);
+		TX[i] = scale(i * 685);
 	}
 
 	for (int i = 0; i < 128; ++i)
 	{
-		KeyX[i] = scale(i / 12 * 684 + genKeyX[i % 12]);
+		KeyX[i] = scale(i / 12 * 685 + genKeyX[i % 12]);
 	}
 
-	TW    = scale(684), TH    = scale(610);
+	TW    = scale(685), TH    = scale(610);
 	BkeyW = scale(58 ), WkeyW = scale(93 );
 	BkeyH = scale(390), WkeyH = scale(608);
 }
