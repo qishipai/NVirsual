@@ -1,4 +1,4 @@
-// utils.cpp 2021-08-03 by 云中龙++
+// utils.cpp 2021-08-31 by 云中龙++
 #include <stdarg.h>
 #include <cstdio>
 #include "NVutils.h"
@@ -12,7 +12,7 @@ void nv_error(const char *prefix, const char *str, ...)
 	va_list args;
 	static HANDLE h = GetStdHandle(STD_ERROR_HANDLE);
 	SetConsoleTextAttribute(h, 0x0F); fprintf(stderr, "[%s] ", prefix);
-	SetConsoleTextAttribute(h, 0x0C); fprintf(stderr, "Error: ");
+	SetConsoleTextAttribute(h, 0x0C); fprintf(stderr, "错误: ");
 	SetConsoleTextAttribute(h, 0x07);
 	va_start(args, str); vfprintf(stderr, str, args); va_end(args);
 }
@@ -22,7 +22,7 @@ void nv_warn(const char *prefix, const char *str, ...)
 	va_list args;
 	static HANDLE h = GetStdHandle(STD_ERROR_HANDLE);
 	SetConsoleTextAttribute(h, 0x0F); fprintf(stderr, "[%s] ", prefix);
-	SetConsoleTextAttribute(h, 0x0E); fprintf(stderr, "Warning: ");
+	SetConsoleTextAttribute(h, 0x0E); fprintf(stderr, "警告: ");
 	SetConsoleTextAttribute(h, 0x07);
 	va_start(args, str); vfprintf(stderr, str, args); va_end(args);
 }
@@ -41,14 +41,14 @@ void nv_print(const char *prefix, const char *str, ...)
 void nv_error(const char *prefix, const char *str, ...)
 {
 	va_list args;
-	fprintf(stderr, "\033[1m[%s] \033[31mError: \033[m", prefix);
+	fprintf(stderr, "\033[1m[%s] \033[31m错误: \033[m", prefix);
 	va_start(args, str); vfprintf(stderr, str, args); va_end(args);
 }
 
 void nv_warn(const char *prefix, const char *str, ...)
 {
 	va_list args;
-	fprintf(stderr, "\033[1m[%s] \033[33mWarning: \033[m", prefix);
+	fprintf(stderr, "\033[1m[%s] \033[33m警告: \033[m", prefix);
 	va_start(args, str); vfprintf(stderr, str, args); va_end(args);
 }
 
