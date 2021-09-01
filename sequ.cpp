@@ -1,4 +1,4 @@
-// sequ.cpp 2021-08-03 by 云中龙++
+// sequ.cpp 2021-08-31 by 云中龙++
 #include "NVutils.h"
 #include "NVmidi.h"
 #include "NVsequ.h"
@@ -28,7 +28,7 @@ void NVsequencer::seq_init(NVmidiFile &midi)
 		}
 		else
 		{
-			T[len + i]   = midi.tracks;
+			T[len + i] = midi.tracks;
 		}
 	}
 
