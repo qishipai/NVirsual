@@ -142,7 +142,7 @@ void Canvas::Note(int k, int yb, int ye, color c)
 
 int Canvas::scale(int x) const
 {
-	return (x * WinW + 3661) / 7322;
+	return (x * WinW + 3666) / 7333;
 }
 
 Canvas::RGBA_pix Canvas::getColor(color C) const
