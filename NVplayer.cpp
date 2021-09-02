@@ -17,7 +17,7 @@ Canvas::color *Col;
 Canvas *Win;
 SDL_Surface *Scr;
 
-int _WinH, pps = 2000;
+int _WinH, pps = 1000;
 double Tplay = 0.0, Tscr;
 
 void DrawNote(u16_t k, const NVnote &n)
