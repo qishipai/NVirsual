@@ -140,7 +140,7 @@ int main(int ac, char *av[])
 
 
 
-static FILE *fp;
+static FILE *fp = nullptr;
 
 void StartWrite()
 {
