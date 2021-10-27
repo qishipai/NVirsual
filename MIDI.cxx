@@ -10,7 +10,7 @@ bool NVmidiFile::mid_open(const char *name)
 
     if (!midifp)
     {
-        error("MIDI", "%s: 不存在或无法访问。  \n", name);
+        error("MIDI", "%s: 不存在或无法访问。\n", name);
         return false;
     }
 
@@ -18,9 +18,8 @@ bool NVmidiFile::mid_open(const char *name)
 
     if (tmp != 0x6468544Du)
     {
-        fclose(midifp);
-        error("MIDI", "%s: 不是标准MIDI文件。 \n", name);
-        return false;
+        error("MIDI", "%s: 不是标准MIDI文件!\n", name);
+        return (fclose(midifp), false);
     }
 
     fread(&size  , 4, 1, midifp);
@@ -43,22 +42,19 @@ bool NVmidiFile::mid_open(const char *name)
 
         if (tmp != 0x6B72544Du)
         {
-            tracks = i; mid_close();
-            fclose(midifp);
-            error("MIDI", "异常数据！(track%hu)\n", i);
-            return false;
+            fclose(midifp); tracks  = i;
+            error("MIDI", "异常数据!(track%hu)\n", i);
+            return (mid_close(), false);
         }
 
-        revU32(size); tmp = 0;
-        trk_over[i] = false;
-        grp_code[i] = 0x0Fu;
+        trk_over[i] = false; tmp = 0;
+        grp_code[i] = 0x0Fu; revU32(size);
         nv_byte *dat = new nv_byte [size];
-        fread(dat, size, 1, midifp);
+        fread(dat, size,  1, midifp);
         trk_data[i] = trk_ptr[i] = dat;
     }
 
-    fclose(midifp);
-    return true;
+    return (fclose(midifp), true);
 }
 
 void NVmidiFile::mid_close()
@@ -94,12 +90,12 @@ bool NVmidiEvent::get(u16_t track, NVmidiFile &midi)
     }
 
     nv_byte code, **p = midi.trk_ptr + track;
+
     tick = getVLi_U32(p);
 
-    if  (**p & 0x80u)
+    if (**p & 0x80u)
     {
-        code = *(*p)++;
-        midi.grp_code[track] = code;
+        code = midi.grp_code[track] = *(*p)++;
     }
     else
     {
@@ -151,7 +147,7 @@ bool NVmidiEvent::get(u16_t track, NVmidiFile &midi)
 
     default:
 
-        warn("MIDI", "异常数据！(track=%hu) \n", track);
+        warn("MIDI", "异常数据!(track%hu)\n", track);
         return false;
     }
 
