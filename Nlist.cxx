@@ -10,29 +10,42 @@ NVnote::NVnote(double T, const NVseq_event &E):
     Tstart(T), Tend(114514191981.0), track(E.track),
     channel(E.chan), key(E.num), vel(E.value) { }
 
-NVnoteList::NVnoteList(const char *name):
-    Tread(0.0), abstick(0), keys(nullptr)
+bool NVnoteList::start_parse(const char *name)
 {
-    if ((err = !M.mid_open(name)))
+    if (!M.mid_open(name))
     {
-        return;
+        return false;
     }
 
-    print(name, "类型码: %4hu\n", M.type);
-    print(name, "轨道数: %4hu\n", M.tracks);
-    print(name, "分辨率: %4hu\n", M.ppnq);
+#if defined(_WIN32) || defined(_WIN64)
 
-    if ((err = M.type == 2))
+    print("INFO", "类型码: %4hu\n", M.type  );
+    print("INFO", "轨道数: %4hu\n", M.tracks);
+    print("INFO", "分辨率: %4hu\n", M.ppnq  );
+
+#else
+
+    print("INFO", "类型码: \e[35m%4hu\e[m\n", M.type  );
+    print("INFO", "轨道数: \e[33m%4hu\e[m\n", M.tracks);
+    print("INFO", "分辨率: \e[36m%4hu\e[m\n", M.ppnq  );
+
+#endif
+
+    Tread = 0.0; abstick = 0;
+
+    if (M.type == 2)
     {
-        error("Nlist", "%s: MIDI格式不支持！(type2)\n");
-        return;
+        M.mid_close();
+        error("Nlist", "%s: 类型不支持！(type=2)\n");
+        return false;
     }
 
     S.seq_init(M); dT = 0.5 / M.ppnq;
     keys = new rmPR<decltype(keys)>::t [M.tracks];
+    return true;
 }
 
-NVnoteList::~NVnoteList()
+void NVnoteList::destroy_all()
 {
     delete[] keys; keys =  nullptr;
     M.mid_close(); S.seq_destroy();
@@ -59,7 +72,7 @@ void NVnoteList::update_to(double T)
                 u32_t speed = *E.data;
                 (speed <<= 8) |= *(E.data + 1);
                 (speed <<= 8) |= *(E.data + 2);
-                dT = 1e-6 * speed / M.ppnq;
+                dT = 0.000001 * speed / M.ppnq;
             }
 
             break;
@@ -89,7 +102,7 @@ void NVnoteList::update_to(double T)
     }
 }
 
-void NVnoteList::OR()
+void NVnoteList::OR()             // 大概有用吧
 {
     for (int i = 0; i < 128; ++i)
     {

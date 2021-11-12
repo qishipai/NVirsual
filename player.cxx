@@ -10,7 +10,7 @@
 using namespace NV;
 using namespace std;
 
-NVnoteList *MIDI;
+NVnoteList MIDI;
 Canvas     *Win;
 Canvas::color *Col;
 
@@ -19,7 +19,7 @@ HSTREAM   Stm;
 
 SDL_Surface *Scr;
 
-int    _WinH, pps = 4000;
+int    _WinH, pps = 1000;
 double Tplay = 0.0, Tscr;
 
 static void DrawNote(u16_t k, const NVnote &n)
@@ -81,6 +81,16 @@ BOOL CALLBACK filter(HSTREAM S, DWORD trk, BASS_MIDI_EVENT *E, BOOL sk, void *u)
     return TRUE;
 }
 
+#ifndef __ANDROID__
+#define NVmain main
+#endif
+
+#if defined(_WIN32) || defined(_WIN64)
+#define BASSMIDI_LIB "bassmidi.dll"
+#else
+#define BASSMIDI_LIB "libbassmidi.so"
+#endif
+
 int NVmain(int ac, char **av)
 {
     if (ac != 3)
@@ -89,27 +99,24 @@ int NVmain(int ac, char **av)
         return 1;
     }
 
-    Win = new Canvas; MIDI = new NVnoteList(av[1]);
-
-    if (MIDI->err)
+    if (!MIDI.start_parse(av[1]))
     {
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+        Canvas C; SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
             "Error!!!!!", "MIDI File Load Failed", nullptr);
-        delete MIDI; delete Win;
         return 1;
     }
 
-    Col = new Canvas::color [MIDI->M.tracks];
+    Win = new Canvas; Col = new Canvas::color [MIDI.M.tracks];
 
-    for (int i = 0; i < MIDI->M.tracks; ++i)
+    for (int i = 0; i < MIDI.M.tracks; ++i)
     {
-        float ang = 6.283185307 * i / (MIDI->M.tracks + 1) * 4;
+        float ang = 6.283185307 * i / (MIDI.M.tracks + 1) * 4;
         Col[i] = complex<float>(cosf(ang), sinf(ang)) * 512.0f;
     }
 
     _WinH = Win->WinH - Win->TH; Tscr = (double)_WinH / pps;
 
-    BASS_PluginLoad("libbassmidi.so", 0);
+    BASS_PluginLoad(BASSMIDI_LIB, 0);
     BASS_SetConfig(BASS_CONFIG_MIDI_AUTOFONT, 0);
     BASS_Init(-1, 44100, 0, 0, nullptr);
 
@@ -131,13 +138,13 @@ int NVmain(int ac, char **av)
 
     while (BASS_ChannelIsActive(Stm) != BASS_ACTIVE_STOPPED)
     {
-        MIDI->update_to(Tplay + Tscr);
-        MIDI->remove_to(Tplay);
-        MIDI->OR(); Win->canvas_clear();
+        MIDI.update_to(Tplay + Tscr);
+        MIDI.remove_to(Tplay);
+        MIDI.OR(); Win->canvas_clear();
 
         for (int k = 0; k < 128; ++k)
         {
-            for (const NVnote &n : MIDI->L[KeyMap[k]])
+            for (const NVnote &n : MIDI.L[KeyMap[k]])
             {
                 DrawNote(k, n);
             }
@@ -150,15 +157,18 @@ int NVmain(int ac, char **av)
         Tplay = BASS_ChannelBytes2Seconds(Stm, BASS_ChannelGetPosition(Stm, BASS_POS_BYTE));
     }
 
-    BASS_Free(); BASS_PluginFree(0);
-    delete MIDI; delete Win; delete[] Col;
+    delete Win; delete[] Col;
+    BASS_Free(); BASS_PluginFree(0); MIDI.destroy_all();
     return 0;
 }
 
+#ifdef __ANDROID__
+
 int main(int ac, char **av)
 {
-    char midi[] = "/sdcard/default.mid";
-    char sf  [] = "/sdcard/default.sf2";
+    char midi[] = "/sdcard/default.mid", sf[] = "/sdcard/default.sf2";
     char *arg[4]{nullptr, midi, sf, nullptr};
     return NVmain(3, arg);
 }
+
+#endif
