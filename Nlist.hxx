@@ -1,20 +1,20 @@
-// Nlist.hxx 2021-10-21 by 云中龙++
-#ifndef __NLIST_H_
-#define __NLIST_H_
+// <NVirsual> Nlist.hxx 2021-11-18 by 云中龙++
+
+#pragma once
 
 #include <stack>
 #include <list>
 
-struct NVnote // 绘制用音符类
+struct NVnote    /* ===== 绘制用音符类 ===== */
 {
-    double  Tstart, Tend;       // 首尾时间
-    u16_t   track;              // 所属轨道
-    nv_byte channel, key, vel;  // 音符属性
+    NVi::u16_t   track;          // 所属轨道
+    double       Tstart, Tend;   // 首尾时间
+    NVi::nv_byte chn, key, vel;  // 音符属性
 
     NVnote(double T, const NVseq_event &E);
 };
 
-class NVnoteList // 音符队列
+class NVnoteList  /* ===== 音符队列类 ===== */
 {
 public:
 
@@ -28,6 +28,9 @@ public:
     /* 关闭组件 */
     void destroy_all();
 
+    /* 定位至T秒，并清空列表 */
+    void list_seek(double T);
+
     /* 将第T秒前的音符放入列表 */
     void update_to(double T);
 
@@ -38,10 +41,8 @@ public:
 
 private:
 
-    NVsequencer S;   // 事件排列器
-    double dT;       // 速率
-    u32_t  abstick;  // 当前读取位置(tick)
+    NVsequencer S;       // 事件序列器
+    double     dT;       // 速率
+    NVi::u32_t abstick;  // 当前读取位置(tick)
     std::stack<std::list<NVnote>::iterator> (*keys)[128];
 };
-
-#endif

@@ -1,33 +1,28 @@
-// Utils.hxx 2021-10-21 by 云中龙++
-#ifndef __UTILS_H_
-#define __UTILS_H_
+// <NVirsual> Utils.hxx 2021-11-18 by 云中龙++
 
-typedef unsigned char  nv_byte;
-typedef unsigned int   u32_t;
-typedef unsigned short u16_t;
+#pragma once
 
-namespace NV
+namespace NVi    /* ===== 工具函数命名空间 ===== */
 {
-    template<typename T> struct rmPR     {typedef T t; };
+    using nv_ul64 = unsigned long long;
+    using size_t  = unsigned long;
+    using u32_t   = unsigned int;
+    using u16_t   = unsigned short;
+    using nv_byte = unsigned char;
 
-    template<typename T> struct rmPR<T&> {typedef T t; };
-
-    template<typename T> struct rmPR<T*> {typedef T t; };
-
-    /* 日志函数 */
+    /* 显示错误 */
     void error(const char *prefix, const char *str, ...);
 
+    /* 显示警告 */
     void warn(const char *prefix, const char *str, ...);
 
-    void print(const char *prefix, const char *str, ...);
+    /* 显示信息 */
+    void info(const char *prefix, const char *str, ...);
 
-    /* 调转16位整型变量的端序 */
-    void revU16(u16_t &x);
+    /* 将字符串映射为大端序整数 */
+    nv_ul64 operator"" _u64be(const char *str, size_t );
 
-    /* 调转32位整型变量的端序 */
-    void revU32(u32_t &x);
+    void revU16(u16_t &x); // 反转16位整型变量的端序
+
+    void revU32(u32_t &x); // 反转32位整型变量的端序
 };
-
-#define NV_VERSION_STR "NVirsual 0.0.008 dev by 云中龙++"
-
-#endif

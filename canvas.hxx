@@ -1,4 +1,6 @@
 
+#pragma once
+
 extern const unsigned char KeyMap[128];
 
 class Canvas

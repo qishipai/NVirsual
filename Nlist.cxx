@@ -3,12 +3,16 @@
 #include "MIDI.hxx"
 #include "Sequ.hxx"
 #include "Nlist.hxx"
-using namespace NV;
+using namespace NVi;
 using namespace std;
 
+template<typename T> struct rP    { using t = T; };
+
+template<typename T> struct rP<T*>{ using t = T; };
+
 NVnote::NVnote(double T, const NVseq_event &E):
-    Tstart(T), Tend(114514191981.0), track(E.track),
-    channel(E.chan), key(E.num), vel(E.value) { }
+    track(E.track), Tstart(T), Tend(114514191981.0),
+    chn(E.chan), key(E.num), vel(E.value){ }
 
 bool NVnoteList::start_parse(const char *name)
 {
@@ -17,31 +21,16 @@ bool NVnoteList::start_parse(const char *name)
         return false;
     }
 
-#if defined(_WIN32) || defined(_WIN64)
-
-    print("INFO", "类型码: %4hu\n", M.type  );
-    print("INFO", "轨道数: %4hu\n", M.tracks);
-    print("INFO", "分辨率: %4hu\n", M.ppnq  );
-
-#else
-
-    print("INFO", "类型码: \e[35m%4hu\e[m\n", M.type  );
-    print("INFO", "轨道数: \e[33m%4hu\e[m\n", M.tracks);
-    print("INFO", "分辨率: \e[36m%4hu\e[m\n", M.ppnq  );
-
-#endif
-
-    Tread = 0.0; abstick = 0;
-
     if (M.type == 2)
     {
-        M.mid_close();
-        error("Nlist", "%s: 类型不支持！(type=2)\n");
-        return false;
+        error("Nlist", "%s: 类型不支持！(format2)\n");
+        info ("Nlist", "支持类型: format0 format1\n");
+        return (M.mid_close(), false);
     }
 
-    S.seq_init(M); dT = 0.5 / M.ppnq;
-    keys = new rmPR<decltype(keys)>::t [M.tracks];
+    S.seq_start(M);
+    abstick = 0; Tread = 0.0; dT = 0.5 / M.ppnq;
+    keys = new rP<decltype(keys)>::t [M.tracks];
     return true;
 }
 
@@ -51,43 +40,82 @@ void NVnoteList::destroy_all()
     M.mid_close(); S.seq_destroy();
 }
 
+void NVnoteList::list_seek(double T)
+{
+    if (T < Tread)
+    {
+        abstick = 0; Tread = 0.0; dT = 0.5 / M.ppnq;
+        M.rewind_all(); S.seq_reset(M);
+    }
+
+    for (int i = 0; i < 128; ++i)
+    {
+        L[i].clear();
+
+        for (u16_t t = 0; t < M.tracks; ++t)
+        {
+            while (!keys[t][i].empty())
+            {
+                keys[t][i].pop();
+            }
+        }
+    }
+
+    while (S.event().track < M.tracks)
+    {
+        const NVseq_event  &E  =  S.event();
+        Tread += dT * (E.abstick - abstick);
+        abstick = E.abstick;
+
+        if (Tread >= T){ break; }
+
+        if (E.type == NV_METYPE::META && E.num == 0x51u)
+        {
+            u32_t   speed    =   E.data[0];
+            speed = speed << 8 | E.data[1];
+            speed = speed << 8 | E.data[2];
+            dT = 0.000001 * speed / M.ppnq;
+        }
+
+        S.seq_next(M);
+    }
+}
+
 void NVnoteList::update_to(double T)
 {
-    while (S.event().track < M.tracks && Tread < T)
+    while (S.event().track < M.tracks)
     {
-        const NVseq_event &E = S.event();
+        const NVseq_event  &E  =  S.event();
+        Tread += dT * (E.abstick - abstick);
+        abstick = E.abstick;
 
-        if (E.abstick != abstick)
-        {
-            Tread += dT * (E.abstick - abstick);
-            abstick = E.abstick;
-        }
+        if (Tread >= T){ break; }
 
         switch (E.type)
         {
-        case (NV_METYPE::OTHER):
+        case (NV_METYPE::META):
 
             if (E.num == 0x51u)
             {
-                u32_t speed = *E.data;
-                (speed <<= 8) |= *(E.data + 1);
-                (speed <<= 8) |= *(E.data + 2);
+                u32_t   speed    =   E.data[0];
+                speed = speed << 8 | E.data[1];
+                speed = speed << 8 | E.data[2];
                 dT = 0.000001 * speed / M.ppnq;
             }
 
             break;
 
-        case (NV_METYPE::NOTEON):
+        case (NV_METYPE::NOON):
 
             if (E.value > 0)
             {
                 L[E.num].emplace_back(Tread, E);
-                auto p = L[E.num].end();
-                keys[E.track][E.num].push(--p);
+                auto nt = L[E.num].end();
+                keys[E.track][E.num].push(--nt);
                 break;
             }
 
-        case (NV_METYPE::NOTEOFF):
+        case (NV_METYPE::NOFF):
 
             if (!keys[E.track][E.num].empty())
             {
@@ -102,7 +130,7 @@ void NVnoteList::update_to(double T)
     }
 }
 
-void NVnoteList::OR()             // 大概有用吧
+void NVnoteList::OR()        // 大概有用的重叠移除器
 {
     for (int i = 0; i < 128; ++i)
     {

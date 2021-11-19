@@ -1,18 +1,21 @@
 #include "Utils.hxx"
 #include "MIDI.hxx"
 #include "Sequ.hxx"
-using namespace NV;
+using namespace NVi;
 
-void NVsequencer::seq_init(NVmidiFile &midi)
+void NVsequencer::seq_start(NVmidiFile &midi)
 {
     E = new NVseq_event [midi.tracks + 1u];
     E[midi.tracks].abstick = 0xFFFFFFFFu;
     E[midi.tracks].track   = midi.tracks;
 
-    for (L = 1; L < midi.tracks; L <<= 1) { }
+    for (L = 1; L < midi.tracks; L <<= 1){ }
 
-    T = new u16_t [L << 1];
+    T = new u16_t [L << 1]; seq_reset(midi);
+}
 
+void NVsequencer::seq_reset(NVmidiFile &midi)
+{
     for (u32_t i = midi.tracks; i < L; ++i)
     {
         T[i + L] = midi.tracks;
@@ -28,7 +31,7 @@ void NVsequencer::seq_init(NVmidiFile &midi)
         else
         {
             T[L + i] = midi.tracks;
-            warn("Sequ", "空轨道: %d", i);
+            warn("Sequ", "发现空轨道: %d", i);
         }
     }
 
