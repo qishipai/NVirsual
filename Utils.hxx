@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace NVi    /* ===== 工具函数命名空间 ===== */
+namespace  NVi   /* ===== 工具函数命名空间 ===== */
 {
     using nv_ul64 = unsigned long long;
     using u32_t   = unsigned int;

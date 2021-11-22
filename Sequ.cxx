@@ -1,3 +1,4 @@
+#include <cstddef>
 #include "Utils.hxx"
 #include "MIDI.hxx"
 #include "Sequ.hxx"
