@@ -1,7 +1,6 @@
 #include <cstdarg>
 #include <cstdio>
 #include "Utils.hxx"
-using namespace NVi;
 
 #if defined(_WIN32) || defined(_WIN64) /* 使用Windows API设置字体颜色 */
 
@@ -62,7 +61,9 @@ void NVi::info(const char *prefix, const char *str, ...)
 
 #endif
 
-nv_ul64 NVi::operator"" _u64be(const char *str, size_t )
+using namespace NVi;
+
+nv_ul64 NVi::operator"" _u64be(const char *str, size_t n)
 {
     nv_ul64 ans = 0;
     u16_t   sft = 0; 
