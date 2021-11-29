@@ -3,15 +3,11 @@
 #include "MIDI.hxx"
 #include "Sequ.hxx"
 #include "Nlist.hxx"
-using namespace NVi;
 using namespace std;
-
-template<typename T> struct rP    { using t = T; };
-
-template<typename T> struct rP<T*>{ using t = T; };
+using namespace NVi;
 
 NVnote::NVnote(double T, const NVseq_event &E):
-    track(E.track), Tstart(T), Tend(114514191981.0),
+    Tstart(T), Tend(1e20), track(E.track),
     chn(E.chan), key(E.num), vel(E.value){ }
 
 bool NVnoteList::start_parse(const char *name)
@@ -23,14 +19,14 @@ bool NVnoteList::start_parse(const char *name)
 
     if (M.type == 2)
     {
-        error("Nlist", "%s: 类型不支持！(format2)\n");
-        info ("Nlist", "支持类型: format0 format1\n");
+        error("Nlist", "%s: 类型不支持(fmt2)\n");
+        info ("Nlist", "支持类型: fmt0 fmt1\n");
         return (M.mid_close(), false);
     }
 
     S.seq_start(M);
-    abstick = 0; Tread = 0.0; dT = 0.5 / M.ppnq;
-    keys = new rP<decltype(keys)>::t [M.tracks];
+    abstick = 0; Tread = 0; dT = .5 / M.ppnq;
+    keys = new stack<List_ptr> [M.tracks][128];
     return true;
 }
 
@@ -44,19 +40,17 @@ void NVnoteList::list_seek(double T)
 {
     if (T < Tread)
     {
-        abstick = 0; Tread = 0.0; dT = 0.5 / M.ppnq;
+        abstick = 0; Tread = 0; dT = .5 / M.ppnq;
         M.rewind_all(); S.seq_reset(M);
     }
 
-    for (int i = 0; i < 128; ++i)
+    for (int k = 0; k < 128; L[k++].clear())
     {
-        L[i].clear();
-
         for (u16_t t = 0; t < M.tracks; ++t)
         {
-            while (!keys[t][i].empty())
+            while (!keys[t][k].empty())
             {
-                keys[t][i].pop();
+                keys[t][k].pop();
             }
         }
     }
@@ -74,7 +68,7 @@ void NVnoteList::list_seek(double T)
             u32_t   speed    =   E.data[0];
             speed = speed << 8 | E.data[1];
             speed = speed << 8 | E.data[2];
-            dT = 0.000001 * speed / M.ppnq;
+            dT  = .000001 * speed / M.ppnq;
         }
 
         S.seq_next(M);
@@ -93,6 +87,18 @@ void NVnoteList::update_to(double T)
 
         switch (E.type)
         {
+        case (NV_METYPE::NOON):
+
+            if (E.value > 0)
+            {
+                L[E.num].emplace_back(Tread, E);
+                List_ptr nt = L[E.num].end();
+                keys[E.track][E.num].push(--nt);
+                break;
+            }
+
+            goto _NOFF;
+
         case (NV_METYPE::META):
 
             if (E.num == 0x51u)
@@ -100,22 +106,12 @@ void NVnoteList::update_to(double T)
                 u32_t   speed    =   E.data[0];
                 speed = speed << 8 | E.data[1];
                 speed = speed << 8 | E.data[2];
-                dT = 0.000001 * speed / M.ppnq;
+                dT  = .000001 * speed / M.ppnq;
             }
 
             break;
 
-        case (NV_METYPE::NOON):
-
-            if (E.value > 0)
-            {
-                L[E.num].emplace_back(Tread, E);
-                auto nt = L[E.num].end();
-                keys[E.track][E.num].push(--nt);
-                break;
-            }
-
-        case (NV_METYPE::NOFF):
+        case (NV_METYPE::NOFF): _NOFF:
 
             if (!keys[E.track][E.num].empty())
             {
@@ -130,23 +126,35 @@ void NVnoteList::update_to(double T)
     }
 }
 
-void NVnoteList::OR()        // 大概有用的重叠移除器
+void NVnoteList::VisualFit(double T)
 {
-    for (int i = 0; i < 128; ++i)
+    for (u16_t k = 0; k < 128; ++k)
     {
-        list<NVnote>::iterator p = L[i].end();
-        double T0 = 114514191981.0;
-        double T1 = 114514191981.0;
+        double T0 = 1e20, T1 = 1e20;
+        List_ptr p = L[k].end();
 
-        while (p-- != L[i].begin())
+        while (p-- != L[k].begin())
         {
             if (T0 < p->Tend && p->Tend < T1)
             {
                 p->Tend = T0, T0 = p->Tstart;
 
-                if (p->Tend - p->Tstart < 1e-7)
+                if (p->Tend - p->Tstart < T)
                 {
-                    p = L[i].erase(p);
+                    double t = (p++)->Tstart;
+                    (p--)->Tstart = t;
+                    p = L[k].erase(p);
+                }
+            }
+            else if (T0 - p->Tstart < T * 2)
+            {
+                u16_t tr = (++p)->track;
+
+                if (tr == (--p)->track)
+                {
+                    double t = (p++)->Tstart;
+                    (p--)->Tstart = t;
+                    p = L[k].erase(p);
                 }
             }
             else
@@ -159,13 +167,13 @@ void NVnoteList::OR()        // 大概有用的重叠移除器
 
 void NVnoteList::remove_to(double T)
 {
-    for (int i = 0; i < 128; ++i)
+    for (u16_t k = 0; k < 128; ++k)
     {
-        list<NVnote>::iterator p = L[i].begin();
+        List_ptr p = L[k].begin();
 
-        while (p != L[i].end() && p->Tstart < T)
+        while (p != L[k].end() && p->Tstart < T)
         {
-            p->Tend < T? (p = L[i].erase(p)) : ++p;
+            p->Tend < T? (p = L[k].erase(p)) : ++p;
         }
     }
 }

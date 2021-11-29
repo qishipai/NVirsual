@@ -135,8 +135,8 @@ int NVmain(int ac, char **av)
     while (BASS_ChannelIsActive(Stm) != BASS_ACTIVE_STOPPED)
     {
         MIDI.update_to(Tplay + Tscr);
-        MIDI.remove_to(Tplay);
-        MIDI.OR(); Win->canvas_clear();
+        MIDI.remove_to(Tplay); MIDI.VisualFit(Tscr * .005);
+        Win->canvas_clear();
 
         for (int k = 0; k < 128; ++k)
         {
